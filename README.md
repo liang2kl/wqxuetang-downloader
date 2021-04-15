@@ -28,7 +28,7 @@
 
 这是一个已知问题。解决办法：
 
-1. 首先打开开发者工具（`F12` 或 `ctrl+shift+I` 或 `command+shift+I`）
+1. 首先打开开发者工具（`F12` 或 `ctrl+shift+I` 或 `option+command+I`）
 2. 然后关闭开发者工具
 
 或者尝试刷新页面。
