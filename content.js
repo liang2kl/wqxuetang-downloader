@@ -1,21 +1,117 @@
 var data = {
-    url: null,
-    page: null
+  url: null,
+  page: null
 };
 
-document.addEventListener("contextmenu", (event) => {
-    data.url = event.target.childNodes[0].getAttribute("src")
-    data.page = event.target.getAttribute("index")
-}, true);
+var stop = false
+
+document.addEventListener("contextmenu", (event) => { data = dataOfChildNode(event.target) }, true);
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
-    if (request == "getClickedElement") {
-        if (data.url) {
-            sendResponse(data)
-            data.url = null
-            data.page = null
-        } else {
-            alert("文泉学堂下载器：解析图片数据失败。")
-        }
+  if (request.name == "getClickedElement") {
+    if (data.url) {
+      sendResponse(data)
+      data.url = null
+      data.page = null
+    } else {
+      alert("文泉学堂下载器：解析图片数据失败。")
     }
+  }
 });
+
+chrome.runtime.onConnect.addListener((port) => {
+  console.assert(port.name == "downloadAll")
+
+  port.onMessage.addListener((message, _) => {
+    if (message.stop) {
+      stop = true
+    } else {
+      stop = false
+      downloadImg(1, port)
+    }
+  })
+})
+
+function downloadImg(index, port) {
+  if (stop) {
+    return
+  }
+  const children = getChildren()
+  console.log(index)
+  console.log(children.length)
+  if (index === children.length - 2) {
+    port.postMessage({ finished: true })
+    return
+  }
+  var child = children[index]
+  window.scroll(0, findPos(child));
+  const data = dataOfChildNode(child)
+
+  if (isValidImgSrc(data.url)) {
+    console.log("valid")
+
+    download(data.url, index, port)
+    downloadImg(index + 1, port)
+  } else {
+    console.log("invalid, loading..." + index)
+
+    var observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type == "attributes") {
+          const newData = dataOfChildNode(child)
+
+          console.log("mutated")
+          if (isValidImgSrc(newData.url)) {
+            console.log("loading completed")
+
+            download(newData.url, index, port)
+            downloadImg(index + 1, port)
+            observer.disconnect()
+          }
+        }
+      })
+    })
+
+    observer.observe(child, {
+      attributes: true
+    })
+
+  }
+}
+
+function getChildren() {
+  var pageBox = document.getElementById("pagebox")
+  return pageBox.childNodes
+}
+
+function download(url, index, port) {
+  port.postMessage({
+    url: url,
+    index: index
+  })
+}
+
+function dataOfChildNode(node) {
+  return {
+    url: node.childNodes[0].getAttribute("src"),
+    page: node.getAttribute("index")
+  }
+}
+
+function isValidImgSrc(src) {
+  if (!src) { return false }
+  const image = new Image()
+  image.src = src
+  if (image.width > 400) { return true }
+  else { return false }
+}
+
+function findPos(obj) {
+  var currentTop = 0
+  if (obj.offsetParent) {
+    do {
+      currentTop += obj.offsetTop
+    } while (obj = obj.offsetParent)
+    return [currentTop]
+  }
+}

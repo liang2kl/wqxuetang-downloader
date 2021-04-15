@@ -4,7 +4,8 @@
   "manifest_version": 3,
   "permissions": [
     "contextMenus",
-    "downloads"
+    "downloads",
+    "scripting"
   ],
   "background": {
     "service_worker": "background.js"
