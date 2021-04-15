@@ -21,7 +21,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       const bookId = url.substring(url.length - numIndex + 1, url.length)
       chrome.downloads.download({
         url: data.url,
-        filename: "文泉学堂-" + bookId + "-" + data.page + ".jpeg"
+        filename: "文泉学堂-" + bookId + "-" + data.page + "页.jpeg"
       });
     }
   });
