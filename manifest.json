@@ -1,0 +1,20 @@
+{
+  "name": "文泉学堂下载器",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "contextMenus",
+    "downloads"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://lib-tsinghua.wqxuetang.com/*", "*://wqxuetang.com/*"],
+      "js": ["content.js"],
+      "all_frames": true
+    }
+  ],
+  "action": {}
+}
