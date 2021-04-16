@@ -1,10 +1,13 @@
 const DOWNLOAD_CURRENT_MENU = "DOWNLOAD_CURRENT_MENU"
 const DOWNLOAD_ALL_MENU = "DOWNLOAD_ALL_MENU"
+const TRY_FIX_MENU = "TRY_FIX_MENU"
 
 const patterns = [
   "https://lib-tsinghua.wqxuetang.com/*",
   "https://wqxuetang.com/*"
 ]
+
+var stop = false
 
 chrome.contextMenus.create({
   id: DOWNLOAD_CURRENT_MENU,
@@ -12,7 +15,6 @@ chrome.contextMenus.create({
   documentUrlPatterns: patterns
 })
 
-var stop = false
 
 chrome.contextMenus.create({
   id: DOWNLOAD_ALL_MENU,
@@ -21,48 +23,64 @@ chrome.contextMenus.create({
   contexts: ["all"]
 })
 
+chrome.contextMenus.create({
+  id: TRY_FIX_MENU,
+  title: "继续下载（若遇到停止下载的情况）",
+  documentUrlPatterns: patterns,
+  contexts: ["all"],
+  enabled: false
+})
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   const bookId = getBookId(tab.url)
 
   if (info.menuItemId == DOWNLOAD_CURRENT_MENU) {
-    chrome.tabs.sendMessage(tab.id, {name: "getClickedElement"}, null, (data) => {
+    chrome.tabs.sendMessage(tab.id, { name: "getClickedElement" }, null, (data) => {
       if (data.url) {
+
         chrome.downloads.download({
           url: data.url,
           filename: "文泉学堂-" + bookId + "-" + data.page + "页.jpeg"
         });
       }
     });
-  } else if (info.menuItemId == DOWNLOAD_ALL_MENU) { 
+  } else {
     var port = chrome.tabs.connect(tab.id, { name: "downloadAll" })
+    console.log("downloading")
 
-    if (stop) {
-      reverseDownloadState(true)
-      port.postMessage({
-        stop: true
+    if (info.menuItemId == DOWNLOAD_ALL_MENU) {
+      if (stop) {
+        reverseDownloadState(true)
+        port.postMessage({
+          stop: true
+        })
+        return
+      }
+
+      port.postMessage({ stop: false })
+
+      port.onMessage.addListener((message, _) => {
+        console.log("act")
+
+        if (message.finished) {
+          reverseDownloadState(true)
+        }
+        if (message.url) {
+          chrome.downloads.download({
+            url: message.url,
+            filename: "文泉学堂-" + bookId + "/" + message.index + ".jpeg"
+          });
+        }
       })
-      return
+
+      reverseDownloadState(false)
+    } else if (info.menuItemId == TRY_FIX_MENU) {
+      port.postMessage({
+        forceResume: true
+      })
     }
 
-    port.postMessage({stop: false})
-
-    port.onMessage.addListener((message, _) => {
-      if (message.finished) {
-        reverseDownloadState(true)
-      }
-      if (message.url) {
-        chrome.downloads.download({
-          url: message.url,
-          filename: "文泉学堂-" + bookId + "/" + message.index + ".jpeg"
-        });
-      }
-    })
-
-    reverseDownloadState(false)
-
   }
-
 })
 
 getBookId = (url) => {
@@ -81,10 +99,16 @@ reverseDownloadState = (_stop) => {
       documentUrlPatterns: patterns,
       contexts: ["all"]
     }, () => { stop = false })
+    chrome.contextMenus.update(TRY_FIX_MENU, {
+      enabled: false
+    })
   } else {
     chrome.contextMenus.update(DOWNLOAD_ALL_MENU, {
       title: "停止下载",
     }, () => { stop = true })
+    chrome.contextMenus.update(TRY_FIX_MENU, {
+      enabled: true
+    })
   }
 }
 

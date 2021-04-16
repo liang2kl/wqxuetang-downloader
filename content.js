@@ -5,6 +5,8 @@ var data = {
 
 var stop = false
 
+var loadingIndex = -1
+
 document.addEventListener("contextmenu", (event) => { data = dataOfChildNode(event.target) }, true);
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
@@ -16,6 +18,11 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
     } else {
       alert("文泉学堂下载器：解析图片数据失败。")
     }
+  } else if (request.name == "resumeDownload") {
+    if (loadingIndex !== -1) {
+      forceResume = true
+    }
+    sendResponse(null)
   }
 });
 
@@ -23,6 +30,13 @@ chrome.runtime.onConnect.addListener((port) => {
   console.assert(port.name == "downloadAll")
 
   port.onMessage.addListener((message, _) => {
+    if (message.forceResume) {
+      const currentIndex = loadingIndex
+      loadingIndex = -1
+      downloadImg(currentIndex, port)
+      return
+    }
+
     if (message.stop) {
       stop = true
     } else {
@@ -37,8 +51,6 @@ function downloadImg(index, port) {
     return
   }
   const children = getChildren()
-  console.log(index)
-  console.log(children.length)
   if (index === children.length - 2) {
     port.postMessage({ finished: true })
     return
@@ -54,7 +66,7 @@ function downloadImg(index, port) {
     downloadImg(index + 1, port)
   } else {
     console.log("invalid, loading..." + index)
-
+    loadingIndex = index;
     var observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type == "attributes") {
@@ -63,10 +75,13 @@ function downloadImg(index, port) {
           console.log("mutated")
           if (isValidImgSrc(newData.url)) {
             console.log("loading completed")
-
-            download(newData.url, index, port)
-            downloadImg(index + 1, port)
             observer.disconnect()
+
+            if (loadingIndex !== -1) {
+              loadingIndex = -1
+              download(newData.url, index, port)
+              downloadImg(index + 1, port)
+            }
           }
         }
       })
@@ -85,6 +100,7 @@ function getChildren() {
 }
 
 function download(url, index, port) {
+  console.log("request download")
   port.postMessage({
     url: url,
     index: index
