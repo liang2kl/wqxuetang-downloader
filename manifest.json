@@ -1,6 +1,6 @@
 {
   "name": "文泉学堂下载器",
-  "version": "1.0",
+  "version": "0.2",
   "manifest_version": 3,
   "permissions": [
     "contextMenus",

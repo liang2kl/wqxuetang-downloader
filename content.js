@@ -40,8 +40,39 @@ chrome.runtime.onConnect.addListener((port) => {
     if (message.stop) {
       stop = true
     } else {
-      stop = false
-      downloadImg(1, port)
+      if (message.from) {
+        const input = window.prompt("输入页码")
+        const length = getChildren().length
+
+        if (!isNaN(parseInt(input))) {
+          if (input >= length - 2) {
+            alert("页码不在范围内。请输入1～" + (length - 3) + "内的整数。")
+            port.postMessage({ finished: true })
+            return
+          } else {
+            stop = false
+            downloadImg(parseInt(input), port)
+          }
+        } else {
+          alert("输入无效。请输入1～" + (length - 3) + "内的整数。")
+          port.postMessage({ finished: true })
+          return
+        }
+
+      } else if (message.fromCurrent) {
+        if (data.page) {
+          stop = false
+          const page = data.page
+          data.url = null
+          data.page = null
+          downloadImg(parseInt(page), port)
+        } else {
+          alert("文泉学堂下载器：解析图片数据失败。")
+        }
+      } else {
+        stop = false
+        downloadImg(1, port)
+      }
     }
   })
 })
@@ -77,7 +108,7 @@ function downloadImg(index, port) {
             console.log("loading completed")
             observer.disconnect()
 
-            if (loadingIndex !== -1) {
+            if (loadingIndex === index) {
               loadingIndex = -1
               download(newData.url, index, port)
               downloadImg(index + 1, port)
@@ -101,6 +132,7 @@ function getChildren() {
 
 function download(url, index, port) {
   console.log("request download")
+  console.log(port)
   port.postMessage({
     url: url,
     index: index
