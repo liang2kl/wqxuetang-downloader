@@ -87,7 +87,8 @@ function downloadImg(index, port) {
     return
   }
   var child = children[index]
-  window.scroll(0, findPos(child));
+  child.scrollIntoView()
+
   const data = dataOfChildNode(child)
 
   if (isValidImgSrc(data.url)) {
