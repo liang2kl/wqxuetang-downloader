@@ -92,21 +92,17 @@ function downloadImg(index, port) {
   const data = dataOfChildNode(child)
 
   if (isValidImgSrc(data.url)) {
-    console.log("valid")
 
     download(data.url, index, port)
     downloadImg(index + 1, port)
   } else {
-    console.log("invalid, loading..." + index)
     loadingIndex = index;
     var observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type == "attributes") {
           const newData = dataOfChildNode(child)
 
-          console.log("mutated")
           if (isValidImgSrc(newData.url)) {
-            console.log("loading completed")
             observer.disconnect()
 
             if (loadingIndex === index) {
@@ -132,8 +128,6 @@ function getChildren() {
 }
 
 function download(url, index, port) {
-  console.log("request download")
-  console.log(port)
   port.postMessage({
     url: url,
     index: index
@@ -153,14 +147,4 @@ function isValidImgSrc(src) {
   image.src = src
   if (image.width > 400) { return true }
   else { return false }
-}
-
-function findPos(obj) {
-  var currentTop = 0
-  if (obj.offsetParent) {
-    do {
-      currentTop += obj.offsetTop
-    } while (obj = obj.offsetParent)
-    return [currentTop]
-  }
 }
